@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+}
+
+enum CaptionLength {
+  SHORT
+  MEDIUM
+  LONG
+}
+
+model User {
+  id                    String    @id @default(cuid())
+  name                  String?
+  email                 String    @unique
+  emailVerified         DateTime?
+  image                 String?
+  passwordHash          String?
+  role                  Role      @default(USER)
+  plan                  Plan      @default(FREE)
+  credits               Int       @default(20)
+  creditsResetAt        DateTime  @default(now())
+  brandVoice            String?
+  defaultCaptionType    String    @default("instagram")
+  defaultTone           String    @default("friendly")
+  defaultLanguage       String    @default("en")
+  theme                 String    @default("system")
+  uiLanguage            String    @default("en")
+  notificationsEnabled  Boolean   @default(true)
+  privacyAnalytics      Boolean   @default(true)
+  autoSave              Boolean   @default(true)
+  stripeCustomerId      String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  captions      CaptionHistory[]
+  usageDaily    UsageDaily[]
+  notifications Notification[]
+  apiKeys       ApiKey[]
+  auditLogs     AuditLog[]
+  workspaces    WorkspaceMember[]
+  scheduled     ScheduledPost[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model CaptionHistory {
+  id            String         @id @default(cuid())
+  userId        String
+  imageUrl      String
+  caption       String         @db.Text
+  captionType   String
+  tone          String
+  language      String
+  length        CaptionLength  @default(MEDIUM)
+  hashtags      String[]
+  emojis        String[]
+  cta           String?
+  keywords      String?
+  audience      String?
+  variants      Json?
+  analysis      Json?
+  wordCount     Int            @default(0)
+  readingTime   Int            @default(1)
+  confidence    Float?
+  isFavorite    Boolean        @default(false)
+  isDeleted     Boolean        @default(false)
+  provider      String?
+  responseMs    Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scheduled     ScheduledPost[]
+
+  @@index([userId, createdAt])
+  @@index([userId, isDeleted])
+}
+
+model UsageDaily {
+  id                 String   @id @default(cuid())
+  userId             String
+  date               DateTime @db.Date
+  captionsGenerated  Int      @default(0)
+  creditsUsed        Int      @default(0)
+  avgResponseMs      Int      @default(0)
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  hashedKey  String    @unique
+  lastFour   String
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  details   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Workspace {
+  id        String             @id @default(cuid())
+  name      String
+  createdAt DateTime           @default(now())
+  members   WorkspaceMember[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String    @default("member")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model ScheduledPost {
+  id        String          @id @default(cuid())
+  userId    String
+  captionId String
+  platform  String
+  runAt     DateTime
+  status    String          @default("scheduled")
+  createdAt DateTime        @default(now())
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caption   CaptionHistory  @relation(fields: [captionId], references: [id], onDelete: Cascade)
+}
