@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { Button, Card, Input, Label, Textarea } from "@/components/ui/primitives";
+import { Card, Input, Label, Textarea } from "@/components/ui/primitives";
 import { CAPTION_TYPES, TONES, LANGUAGES } from "@/constants/app";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";

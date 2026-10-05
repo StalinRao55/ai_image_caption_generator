@@ -11,7 +11,8 @@ export async function GET() {
     const session = await requireUser();
     const user = await userRepository.findById(session.id);
     if (!user) throw Errors.unauthorized();
-    const { passwordHash: _, ...safe } = user;
+    const { passwordHash, ...safe } = user;
+    void passwordHash;
     return NextResponse.json(safe);
   } catch (error) {
     return jsonError(error);
@@ -23,7 +24,8 @@ export async function PATCH(req: Request) {
     const session = await requireUser();
     const data = settingsSchema.parse(await req.json());
     const user = await userRepository.update(session.id, data);
-    const { passwordHash: _, ...safe } = user;
+    const { passwordHash, ...safe } = user;
+    void passwordHash;
     return NextResponse.json(safe);
   } catch (error) {
     return jsonError(error);
